@@ -1,5 +1,6 @@
 # TorPhantom
 ## BETA v0.9
+## BETA v1.0 (For MacOS)
 A fork of [TorGhost](https://github.com/susmithHCK/torghost), a little utilitly used to route all traffic through TOR.
 
 Currently depends on macchanger and tor.
