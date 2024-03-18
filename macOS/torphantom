@@ -1,10 +1,9 @@
-#!/usr/bin/python
+#!/opt/homebrew/bin/python3
 import sys
-from commands import getoutput
 import time
 import signal
-from urllib2 import urlopen
 import subprocess
+from urllib.request import urlopen
 
 class bcolors:
     BLUE = '\033[94m'
@@ -18,128 +17,122 @@ class bcolors:
     WHITE = '\033[37m'
     CYAN = '\033[36m'
 
-
 def timelog():
-	current_time = time.localtime()
-	ctime = time.strftime('%H:%M:%S', current_time)
-	return "["+ ctime + "]"
+    current_time = time.strftime('%H:%M:%S', time.localtime())
+    return "[" + current_time + "]"
 
 def shutdown():
-	print ""
-	print bcolors.BGRED + bcolors.WHITE + timelog() + "[info] shutting down torphantom" + bcolors.ENDC +"\n\n"
-	sys.exit()
-
+    print("\n" + bcolors.BGRED + bcolors.WHITE + timelog() + "[info] shutting down torphantom" + bcolors.ENDC + "\n\n")
+    sys.exit()
 
 def sigint_handler(signum, frame):
-    print '\n user interrupt ! shutting down'
+    print('\n' + timelog() + bcolors.RED + "User interrupt! Shutting down." + bcolors.ENDC)
     shutdown()
 
 def logo():
-	subprocess.call(["clear"])
-	print bcolors.CYAN + bcolors.BOLD
-	print """
-	  _______         _____  _                 _
-	 |__   __|       |  __ \| |               | |
-	    | | ___  _ __| |__) | |__   __ _ _ __ | |_ ___  _ __ ___
-	    | |/ _ \| '__|  ___/| '_ \ / _` | '_ \| __/ _ \| '_ ` _ \\
-	    | | (_) | |  | |    | | | | (_| | | | | || (_) | | | | | |
-	    |_|\___/|_|  |_|    |_| |_|\__,_|_| |_|\__\___/|_| |_| |_|
-		v0.9 - 3ndG4me | www.injecti0n.org
+    subprocess.call(["clear"])
+    print(bcolors.CYAN + bcolors.BOLD)
+    print("""
+      _______         _____  _                 _
+     |__   __|       |  __ \| |               | |
+        | | ___  _ __| |__) | |__   __ _ _ __ | |_ ___  _ __ ___
+        | |/ _ \| '__|  ___/| '_ \ / _` | '_ \| __/ _ \| '_ ` _ \\
+        | | (_) | |  | |    | | | | (_| | | | | || (_) | | | | | |
+        |_|\___/|_|  |_|    |_| |_|\__,_|_| |_|\__\___/|_| |_| |_|
+            v1.0b - 3ndG4me | www.injecti0n.org (Updated by Dogematti from v.0.9 to v1.0b, could've made my own tool, but I figured...)
+    """)
+    print(bcolors.ENDC)
 
-    """
-	print bcolors.ENDC
 def usage():
-	logo()
-	print """
-
-	USAGE:
-        torphantom start -----(start torphantom)
-	torphantom start -i <interface(s)> -----(start with macchanger)
-        torphantom stop  -----(stop torphantom)
-
-    """
-	sys.exit()
+    logo()
+    print("""
+    USAGE:
+    torphantom start         (start torphantom)
+    torphantom start -i <interface(s)>  (start with macchanger)
+    torphantom stop          (stop torphantom)
+    """)
+    sys.exit()
 
 def internet_on():
-
-	while True:
-		try:
-			urlopen('https://check.torproject.org/', timeout=1)
-	        	return True
-		except :
-			continue
-		break
+    while True:
+        try:
+            urlopen('https://check.torproject.org/', timeout=1)
+            return True
+        except:
+            continue
+        break
 
 def tor_status():
-		status_message = subprocess.check_output("curl --socks5 localhost:9050 --socks5-hostname localhost:9050 -s https://check.torproject.org/ | cat | grep -m 1 Congratulations | xargs", shell=True)
-		if(status_message):
-			return True
-		else:
-			return False
+    try:
+        status_message = subprocess.check_output("curl --socks5 localhost:9050 --socks5-hostname localhost:9050 -s https://check.torproject.org/ | grep -m 1 Congratulations || true", shell=True)
+        return b"Congratulations" in status_message
+    except subprocess.CalledProcessError:
+        return False
 
 def ip():
-	if(internet_on() and tor_status()):
-		ipadd = "Tor is enabled\n" + subprocess.check_output("curl --socks5 localhost:9050 --socks5-hostname localhost:9050 -s https://check.torproject.org/ | cat | grep -m 1 IP | xargs | sed 's/<[^>]*>//g'", shell=True)
-	elif (internet_on() and not tor_status()):
-		ipadd = "Tor is disabled\nYour IP address appears to be: " + subprocess.check_output("curl -s ipinfo.io/ip", shell=True)
-	return ipadd
-
-
-
-signal.signal(signal.SIGINT, sigint_handler)
+    if internet_on():
+        if tor_status():
+            ipadd = subprocess.check_output("curl --socks5 localhost:9050 --socks5-hostname localhost:9050 -s https://check.torproject.org/ | grep -m 1 IP | sed 's/<[^>]*>//g'", shell=True).decode('utf-8').strip()
+            return f"Tor is enabled\n{ipadd}"
+        else:
+            ipadd = subprocess.check_output("curl -s ipinfo.io/ip", shell=True).decode('utf-8').strip()
+            return f"Tor is disabled\nYour IP address appears to be: {ipadd}"
+    else:
+        return ""
 
 def change_macaddr(interfaces):
-	print timelog()+" Changing MAC Addresses..."
-	for interface in interfaces:
-		print timelog() + bcolors.BLUE + bcolors.BOLD + " Changing: " + interface + bcolors.ENDC
-		subprocess.call(["macchanger", "-r" , interface])
-		subprocess.call(["ifconfig", interface ,"down"])
-		subprocess.call(["ifconfig", interface ,"up"])
-	print timelog()+bcolors.GREEN+" MAC Addresses changed"+bcolors.ENDC
+    print(timelog() + " Changing MAC Addresses...")
+    for interface in interfaces:
+        print(timelog() + bcolors.BLUE + bcolors.BOLD + f" Changing: {interface}" + bcolors.ENDC)
+        subprocess.run(["macchanger", "-r", interface])
+        subprocess.run(["ifconfig", interface, "down"])
+        subprocess.run(["ifconfig", interface, "up"])
+    print(timelog() + bcolors.GREEN + " MAC Addresses changed" + bcolors.ENDC)
 
 def start_torphantom():
-
-	print timelog()+" configuring proxy",
-
-	proxy_setup = """
-		sudo networksetup -setsocksfirewallproxy Wi-Fi 127.0.0.1 9050 off
-    	sudo networksetup -setsocksfirewallproxystate Wi-Fi on
-    	"""
-	subprocess.call(proxy_setup, shell=True)
-	print bcolors.GREEN+"[done]"+bcolors.ENDC
-	print timelog()+" starting tor",
-	subprocess.call("tor --quiet &", shell=True)
-	print bcolors.GREEN+"[done]"+bcolors.ENDC
-	print timelog()+" Fetching current status and IP..."
-	print timelog()+" CURRENT STATUS AND IP : "+bcolors.GREEN+ip()+bcolors.ENDC
+    logo()
+    print(timelog() + " Configuring proxy")
+    proxy_setup = """
+        sudo networksetup -setsocksfirewallproxy Wi-Fi 127.0.0.1 9050 off
+        sudo networksetup -setsocksfirewallproxystate Wi-Fi on
+    """
+    subprocess.run(proxy_setup, shell=True, check=True)
+    print(bcolors.GREEN + "[done]" + bcolors.ENDC)
+    
+    print(timelog() + " Starting tor")
+    subprocess.run("tor --quiet &", shell=True)
+    print(bcolors.GREEN + "[done]" + bcolors.ENDC)
+    
+    print(timelog() + " Fetching current status and IP...")
+    print(timelog() + " CURRENT STATUS AND IP : " + bcolors.GREEN + ip() + bcolors.ENDC)
 
 def stop_torphantom():
-	print bcolors.RED+timelog()+" STOPPING torphantom"+bcolors.ENDC
-	print timelog()+" stopping tor",
-	subprocess.call(["sudo", "pkill", "tor"])
-	print bcolors.GREEN+"[done]"+bcolors.ENDC
-	print timelog()+" disabling proxy",
-	subprocess.call("sudo networksetup -setsocksfirewallproxystate Wi-Fi off", shell=True)
-	print bcolors.GREEN+"[done]"+bcolors.ENDC
-	print timelog()+" Fetching current status and IP..."
-	print timelog()+" CURRENT STATUS AND IP : "+bcolors.GREEN+ip()+bcolors.ENDC
+    logo()
+    print(bcolors.RED + timelog() + " STOPPING torphantom" + bcolors.ENDC)
+    
+    print(timelog() + " Stopping tor")
+    subprocess.run(["sudo", "pkill", "tor"])
+    print(bcolors.GREEN + "[done]" + bcolors.ENDC)
+    
+    print(timelog() + " Disabling proxy")
+    subprocess.run("sudo networksetup -setsocksfirewallproxystate Wi-Fi off", shell=True)
+    print(bcolors.GREEN + "[done]" + bcolors.ENDC)
+    
+    print(timelog() + " Fetching current status and IP...")
+    print(timelog() + " CURRENT STATUS AND IP : " + bcolors.GREEN + ip() + bcolors.ENDC)
 
 arg = sys.argv[1:]
 
-
 if len(arg) >= 1:
-	if sys.argv[1] == "start":
-		logo()
-		if len(arg) >= 2:
-			if sys.argv[2] == "-i":
-				interfaces = []
-				for interface in sys.argv[3:]:
-					interfaces.append(interface)
-				change_macaddr(interfaces)
-
-		start_torphantom()
-	elif sys.argv[1] == "stop":
-		logo()
-		stop_torphantom()
+    if arg[0] == "start":
+        start_torphantom()
+    elif arg[0] == "stop":
+        stop_torphantom()
+    elif arg[0] == "start" and len(arg) >= 2 and arg[1] == "-i":
+        interfaces = arg[2:]
+        change_macaddr(interfaces)
+        start_torphantom()
+    else:
+        usage()
 else:
-	usage()
+    usage()
